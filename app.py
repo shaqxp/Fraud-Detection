@@ -4,7 +4,11 @@ import numpy as np
 import joblib
 from pathlib import Path
 
-st.set_page_config(page_title="Fraud Detection System", page_icon="🔐", layout="wide")
+st.set_page_config(
+    page_title="Fraud Detection System",
+    page_icon="🔐",
+    layout="wide"
+)
 
 MODEL_PATH = Path("fraud_model.pkl")
 SCALER_PATH = Path("scaler.pkl")
@@ -22,10 +26,16 @@ def load_artifacts():
 model, scaler = load_artifacts()
 
 st.title("🔐 Transaction Fraud Detection System")
-st.write("Enter transaction details below to predict whether a transaction is fraudulent.")
+st.write(
+    "This application predicts whether a credit card transaction is likely to be fraudulent "
+    "using a trained machine learning model."
+)
 
 if model is None or scaler is None:
-    st.error("Model files not found. Make sure `fraud_model.pkl` and `scaler.pkl` are in the same folder as this app.")
+    st.error(
+        "Model files not found. Make sure `fraud_model.pkl` and `scaler.pkl` "
+        "are in the same folder as this app."
+    )
     st.stop()
 
 feature_names = [
@@ -67,11 +77,78 @@ default_values = {
     "Amount": 149.62
 }
 
+feature_descriptions = {
+    "Time": "Seconds elapsed between this transaction and the first transaction in the dataset.",
+    "Amount": "Transaction amount in the original currency.",
+    "V1": "An anonymized feature generated using PCA.",
+    "V2": "An anonymized feature generated using PCA.",
+    "V3": "An anonymized feature generated using PCA.",
+    "V4": "An anonymized feature generated using PCA.",
+    "V5": "An anonymized feature generated using PCA.",
+    "V6": "An anonymized feature generated using PCA.",
+    "V7": "An anonymized feature generated using PCA.",
+    "V8": "An anonymized feature generated using PCA.",
+    "V9": "An anonymized feature generated using PCA.",
+    "V10": "An anonymized feature generated using PCA.",
+    "V11": "An anonymized feature generated using PCA.",
+    "V12": "An anonymized feature generated using PCA.",
+    "V13": "An anonymized feature generated using PCA.",
+    "V14": "An anonymized feature generated using PCA.",
+    "V15": "An anonymized feature generated using PCA.",
+    "V16": "An anonymized feature generated using PCA.",
+    "V17": "An anonymized feature generated using PCA.",
+    "V18": "An anonymized feature generated using PCA.",
+    "V19": "An anonymized feature generated using PCA.",
+    "V20": "An anonymized feature generated using PCA.",
+    "V21": "An anonymized feature generated using PCA.",
+    "V22": "An anonymized feature generated using PCA.",
+    "V23": "An anonymized feature generated using PCA.",
+    "V24": "An anonymized feature generated using PCA.",
+    "V25": "An anonymized feature generated using PCA.",
+    "V26": "An anonymized feature generated using PCA.",
+    "V27": "An anonymized feature generated using PCA.",
+    "V28": "An anonymized feature generated using PCA."
+}
+
 st.sidebar.header("About")
 st.sidebar.write(
-    "This app predicts fraud probability using a trained machine learning model."
+    "This app predicts the probability that a transaction is fraudulent using a trained machine learning model."
 )
-st.sidebar.write(f"Decision threshold: **{THRESHOLD}**")
+st.sidebar.write(f"**Decision Threshold:** {THRESHOLD}")
+st.sidebar.info(
+    "A transaction is marked as fraud when the predicted probability is greater than or equal to the threshold."
+)
+
+st.subheader("How to Use")
+st.markdown(
+    """
+    - Enter transaction values in the form below.
+    - `Time` and `Amount` are real transaction fields.
+    - `V1` to `V28` are anonymized PCA-transformed features from the original dataset.
+    - The default values represent a sample transaction.
+    - After submission, the app will show the fraud probability and risk level.
+    """
+)
+
+with st.expander("About the Input Features"):
+    st.markdown(
+        """
+        **Feature Explanation**
+        
+        - **Time**: Number of seconds since the first transaction in the dataset.
+        - **Amount**: Transaction amount.
+        - **V1 to V28**: Confidential transformed features created using PCA for privacy reasons.
+        
+        Since the original dataset is anonymized, the exact business meaning of `V1` to `V28`
+        is not available. They are still useful because the model has learned patterns from them.
+        """
+    )
+
+    feature_info_df = pd.DataFrame({
+        "Feature": feature_names,
+        "Description": [feature_descriptions[f] for f in feature_names]
+    })
+    st.dataframe(feature_info_df, use_container_width=True)
 
 st.subheader("Input Transaction Details")
 
@@ -84,7 +161,8 @@ with st.form("fraud_form"):
             inputs[feature] = st.number_input(
                 feature,
                 value=float(default_values[feature]),
-                format="%.6f"
+                format="%.6f",
+                help=feature_descriptions.get(feature, "Enter a numeric value.")
             )
 
     submitted = st.form_submit_button("Check Transaction")
@@ -92,6 +170,7 @@ with st.form("fraud_form"):
 if submitted:
     input_df = pd.DataFrame([inputs], columns=feature_names)
 
+    # Scale only Time and Amount as done during training
     input_df[["Time", "Amount"]] = scaler.transform(input_df[["Time", "Amount"]])
 
     probability = model.predict_proba(input_df)[0][1]
@@ -114,6 +193,21 @@ if submitted:
         risk = "High Risk"
 
     st.write(f"**Risk Level:** {risk}")
+
+    with st.expander("How to Interpret the Result"):
+        st.markdown(
+            f"""
+            - **Fraud Probability** shows how likely the transaction is to be fraudulent.
+            - **Threshold = {THRESHOLD}**
+            - If probability is **greater than or equal to {THRESHOLD}**, the transaction is classified as **Fraud**.
+            - If probability is **less than {THRESHOLD}**, the transaction is classified as **Safe**.
+            
+            **Risk Levels**
+            - Below 0.30 → Low Risk
+            - 0.30 to 0.69 → Medium Risk
+            - 0.70 and above → High Risk
+            """
+        )
 
     st.subheader("Entered Transaction Data")
     st.dataframe(pd.DataFrame([inputs]), use_container_width=True)
